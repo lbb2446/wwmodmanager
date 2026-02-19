@@ -35,7 +35,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='ModManager',
+    name='Mod管理工具v1,'
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
