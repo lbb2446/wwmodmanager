@@ -286,6 +286,9 @@
             flex: 1;
             position: relative;
         }
+        .mod-card .readme-wrapper:hover {
+            z-index: 10;
+        }
         .mod-card .readme-btn {
             width: 100%;
             padding: 6px;
@@ -295,6 +298,8 @@
             color: var(--text);
             cursor: pointer;
             font-size: 12px;
+            position: relative;
+            z-index: 2;
         }
         .mod-card .readme-wrapper:hover .readme-btn {
             background: var(--accent);
@@ -303,7 +308,7 @@
         .mod-card .readme-tooltip {
             display: none;
             position: absolute;
-            bottom: calc(100% + 8px);
+            bottom: 100%;
             left: 0;
             right: 0;
             padding: 12px;
@@ -317,19 +322,11 @@
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            z-index: 100;
+            z-index: 1;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         .mod-card .readme-wrapper:hover .readme-tooltip {
             display: block;
-        }
-        .mod-card .readme-tooltip::after {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 20px;
-            border: 6px solid transparent;
-            border-top-color: var(--surface);
         }
 
         #emptyState {
