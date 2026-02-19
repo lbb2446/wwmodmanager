@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mod Manager</title>
+    <title id="pageTitle">Mod Manager</title>
     <style>
         :root {
             --bg: #1a1b26;
@@ -261,13 +261,14 @@
 <body>
 
 <div id="sidebar">
-    <h1>Mod Manager</h1>
+    <h1 id="appTitle">Mod Manager</h1>
     <div id="syncWrap">
         <button id="syncBtn" type="button" onclick="syncChars()">&#21516;&#27493;&#35268;&#21017;</button>
     </div>
     <div id="folderActions">
         <button class="folder-btn" type="button" onclick="openModsFolder()">&#25171;&#24320;Mod&#25991;&#20214;&#22841;</button>
         <button class="folder-btn" type="button" onclick="openExeFolder()">&#25171;&#24320;&#24212;&#29992;&#25991;&#20214;&#22841;</button>
+        <button class="folder-btn" type="button" onclick="showSettings()">&#35774;&#32622;</button>
     </div>
     <div id="charList"></div>
     <div id="shutdownWrap">
@@ -493,6 +494,50 @@
             alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
         });
     }
+
+    function loadConfig() {
+        fetch('/api/config').then(function(res) { return res.json(); }).then(function(config) {
+            if (config.app_title) {
+                document.title = config.app_title;
+                document.getElementById('pageTitle').textContent = config.app_title;
+                document.getElementById('appTitle').textContent = config.app_title;
+            }
+        }).catch(function(e) {
+            console.log('Failed to load config:', e);
+        });
+    }
+
+    function showSettings() {
+        fetch('/api/config').then(function(res) { return res.json(); }).then(function(config) {
+            var title = prompt('\u8f93\u5165\u8f6c\u4e3a\u6807\u9898:', config.app_title || 'Mod Manager');
+            if (title === null) return;
+            var newConfig = {
+                app_title: title,
+                app_name: title,
+                icon_path: config.icon_path || 'icon.ico'
+            };
+            fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newConfig)
+            }).then(function(res) { return res.json(); }).then(function(data) {
+                if (data.status === 'success') {
+                    document.title = title;
+                    document.getElementById('pageTitle').textContent = title;
+                    document.getElementById('appTitle').textContent = title;
+                    alert('\u8bbe\u7f6e\u5df2\u4fdd\u5b58\uff0c\u9700\u8981\u91cd\u542f\u5e94\u7528\u624d\u4f1a\u751f\u6548');
+                } else {
+                    alert('\u4fdd\u5b58\u5931\u8d25: ' + (data.message || '\u672a\u77e5\u9519\u8bef'));
+                }
+            }).catch(function(e) {
+                alert('\u8bf7\u6c42\u5931\u8d25: ' + e.message);
+            });
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25: ' + e.message);
+        });
+    }
+
+    loadConfig();
 </script>
 </body>
 </html>

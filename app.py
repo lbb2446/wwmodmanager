@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import json
 import subprocess
 import requests
 import signal
@@ -11,6 +12,35 @@ import threading
 import atexit
 from flask import Flask, render_template, jsonify, request, send_file
 from urllib.parse import unquote, quote
+
+
+DEFAULT_CONFIG = {
+    "app_title": "Mod Manager",
+    "app_name": "Mod Manager",
+    "icon_path": "icon.ico"
+}
+
+def load_config():
+    config_path = os.path.join(get_base_dir(), 'config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return DEFAULT_CONFIG.copy()
+
+def save_config(config):
+    config_path = os.path.join(get_base_dir(), 'config.json')
+    try:
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        print(f"Failed to save config: {e}")
+        return False
+
+CONFIG = load_config()
 
 
 def is_frozen():
@@ -107,7 +137,20 @@ def find_preview_path(dir_path):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', app_title=CONFIG.get('app_title', 'Mod Manager'))
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    return jsonify(CONFIG)
+
+@app.route('/api/config', methods=['POST'])
+def update_config():
+    global CONFIG
+    new_config = request.json or {}
+    CONFIG.update(new_config)
+    if save_config(CONFIG):
+        return jsonify({"status": "success", "config": CONFIG})
+    return jsonify({"status": "error", "message": "Failed to save config"}), 500
 
 @app.route('/api/debug_info', methods=['GET'])
 def debug_info():
