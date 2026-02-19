@@ -263,50 +263,48 @@
 <div id="sidebar">
     <h1>Mod Manager</h1>
     <div id="syncWrap">
-        <button id="syncBtn" type="button" onclick="syncChars()">Sync Characters</button>
+        <button id="syncBtn" type="button" onclick="syncChars()">&#21516;&#27493;&#35268;&#21017;</button>
     </div>
     <div id="folderActions">
-        <button class="folder-btn" type="button" onclick="openModsFolder()">Open Mods Folder</button>
-        <button class="folder-btn" type="button" onclick="openExeFolder()">Open App Folder</button>
+        <button class="folder-btn" type="button" onclick="openModsFolder()">&#25171;&#24320;Mod&#25991;&#20214;&#22841;</button>
+        <button class="folder-btn" type="button" onclick="openExeFolder()">&#25171;&#24320;&#24212;&#29992;&#25991;&#20214;&#22841;</button>
     </div>
     <div id="charList"></div>
     <div id="shutdownWrap">
-        <button id="shutdownBtn" type="button" onclick="shutdownApp()">Close App</button>
+        <button id="shutdownBtn" type="button" onclick="shutdownApp()">&#20851;&#38381;&#24212;&#29992;</button>
     </div>
 </div>
 
 <div id="main">
     <div id="mainHead">
-        <h2 id="currentChar">Select a character</h2>
+        <h2 id="currentChar">&#35831;&#36873;&#25321;&#24038;&#20391;&#35268;&#21017;</h2>
         <div id="batchActions" class="batch-actions">
-            <button type="button" class="btn-enable" onclick="batchToggle('enable_all')">Enable All</button>
-            <button type="button" class="btn-disable" onclick="batchToggle('disable_all')">Disable All</button>
+            <button type="button" class="btn-enable" onclick="batchToggle('enable_all')">&#20840;&#37096;&#21551;&#29992;</button>
+            <button type="button" class="btn-disable" onclick="batchToggle('disable_all')">&#20840;&#37096;&#31105;&#29992;</button>
         </div>
     </div>
     <div id="modList"></div>
     <div id="emptyState" style="display:none;">
-        <p>No mods for this character.</p>
-        <p>Place mod folders in the character directory, or click "Sync Characters" first.</p>
+        <p>&#35813;&#35268;&#21017;&#19979;&#26242;&#26087;Mod&#65292;&#25110;&#26410;&#36873;&#25321;&#35268;&#21017;&#12290;</p>
+        <p>&#21487;&#23558;Mod&#25991;&#20214;&#22841;&#25918;&#20837;&#23545;&#24212;&#35268;&#21017;&#30446;&#24405;&#65292;&#25110;&#20808;&#28857;&#20987;&#12300;&#21516;&#27493;&#35268;&#21017;&#12301;&#20174;&#25509;&#21475;&#25209;&#21462;&#35268;&#21017;&#21015;&#34920;&#12290;</p>
     </div>
 </div>
 
 <script>
-    let selectedChar = null;
+    var selectedChar = null;
 
     document.addEventListener('DOMContentLoaded', loadChars);
 
-    async function loadChars() {
-        const listEl = document.getElementById('charList');
-        try {
-            const res = await fetch('/api/chars');
-            const chars = await res.json();
+    function loadChars() {
+        var listEl = document.getElementById('charList');
+        fetch('/api/chars').then(function(res) { return res.json(); }).then(function(chars) {
             listEl.innerHTML = '';
             if (chars.length === 0) {
-                listEl.innerHTML = '<p style="padding:12px;color:var(--text-dim);font-size:13px;">No characters. Click "Sync Characters" first.</p>';
+                listEl.innerHTML = '<p style="padding:12px;color:var(--text-dim);font-size:13px;">&#26242;&#26087;&#35268;&#21017;&#65292;&#35831;&#20808;&#28857;&#20987;&#12300;&#21516;&#27493;&#35268;&#21017;&#12301;</p>';
                 return;
             }
             chars.forEach(function (c) {
-                const div = document.createElement('div');
+                var div = document.createElement('div');
                 div.className = 'char-item';
                 div.dataset.name = c.name;
                 div.innerHTML = c.image_url
@@ -317,9 +315,9 @@
                 div.onclick = function () { loadMods(c.name); };
                 listEl.appendChild(div);
             });
-        } catch (e) {
-            listEl.innerHTML = '<p style="padding:12px;color:var(--red);">Load failed</p>';
-        }
+        }).catch(function(e) {
+            listEl.innerHTML = '<p style="padding:12px;color:var(--red);">&#21152;&#36733;&#22833;&#36133;</p>';
+        });
     }
 
     function setActiveChar(name) {
@@ -328,66 +326,63 @@
         });
     }
 
-    async function syncChars() {
-        const btn = document.getElementById('syncBtn');
+    function syncChars() {
+        var btn = document.getElementById('syncBtn');
         btn.disabled = true;
-        btn.textContent = 'Syncing...';
-        try {
-            const res = await fetch('/api/sync_chars', { method: 'POST' });
-            const text = await res.text();
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (_) {
-                alert('Server error: ' + (res.ok ? 'Invalid JSON' : 'HTTP ' + res.status));
+        btn.textContent = '\u540c\u6b65\u4e2d...';
+        fetch('/api/sync_chars', { method: 'POST' }).then(function(res) { return res.text(); }).then(function(text) {
+            var data;
+            try { data = JSON.parse(text); } catch (_) {
+                alert('\u670d\u52a1\u5668\u8fd4\u5f02\u5e38');
+                btn.disabled = false;
+                btn.textContent = '\u540c\u6b65\u89c4\u5219';
                 return;
             }
             if (data.status === 'success') {
-                await loadChars();
-                alert('Sync complete: ' + data.count + ' characters');
+                loadChars();
+                alert('\u540c\u6b65\u5b8c\u6210\uff0c\u5171 ' + data.count + ' \u4e2a\u89c4\u5219');
             } else {
-                alert('Sync failed: ' + (data.message || 'Unknown error'));
+                alert('\u540c\u6b65\u5931\u8d25\uff1a' + (data.message || '\u672a\u77e5\u9519\u8bef'));
             }
-        } catch (e) {
-            alert('Request failed: ' + e.message);
-        } finally {
             btn.disabled = false;
-            btn.textContent = 'Sync Characters';
-        }
+            btn.textContent = '\u540c\u6b65\u89c4\u5219';
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
+            btn.disabled = false;
+            btn.textContent = '\u540c\u6b65\u89c4\u5219';
+        });
     }
 
-    async function loadMods(charName) {
+    function loadMods(charName) {
         selectedChar = charName;
         document.getElementById('currentChar').textContent = charName;
         document.getElementById('batchActions').style.display = 'flex';
         document.getElementById('emptyState').style.display = 'none';
         setActiveChar(charName);
 
-        const container = document.getElementById('modList');
-        container.innerHTML = '<p style="color:var(--text-dim);">Loading...</p>';
-        try {
-            const res = await fetch('/api/get_mods?char=' + encodeURIComponent(charName));
-            const mods = await res.json();
+        var container = document.getElementById('modList');
+        container.innerHTML = '<p style="color:var(--text-dim);">\u52a0\u8f7d\u4e2d...</p>';
+        fetch('/api/get_mods?char=' + encodeURIComponent(charName)).then(function(res) { return res.json(); }).then(function(mods) {
             container.innerHTML = '';
             if (mods.length === 0) {
                 document.getElementById('emptyState').style.display = 'block';
                 return;
             }
             mods.forEach(function (mod) {
-                const card = document.createElement('div');
+                var card = document.createElement('div');
                 card.className = 'mod-card' + (mod.disabled ? ' disabled' : '');
-                const action = mod.disabled ? 'enable' : 'disable';
-                const btnClass = mod.disabled ? 'enable' : 'disable';
-                const btnText = mod.disabled ? 'Enable' : 'Disable';
-                const previewHtml = mod.preview_url
+                var action = mod.disabled ? 'enable' : 'disable';
+                var btnClass = mod.disabled ? 'enable' : 'disable';
+                var btnText = mod.disabled ? '\u542f\u7528' : '\u7981\u7528';
+                var previewHtml = mod.preview_url
                     ? '<img src="' + mod.preview_url + '" alt="" loading="lazy">'
-                    : '<span class="placeholder">No preview</span>';
+                    : '<span class="placeholder">\u65e0\u9884\u89c6\u56fe</span>';
                 card.innerHTML =
                     '<div class="preview-wrap">' + previewHtml + '</div>' +
                     '<div class="info">' +
                     '<div class="clean-name">' + escapeHtml(mod.clean_name) + '</div>' +
                     '<div class="status-row">' +
-                    '<span><span class="status-dot ' + (mod.disabled ? 'off' : 'on') + '"></span>' + (mod.disabled ? 'Disabled' : 'Enabled') + '</span>' +
+                    '<span><span class="status-dot ' + (mod.disabled ? 'off' : 'on') + '"></span>' + (mod.disabled ? '\u672a\u542f\u7528' : '\u5df2\u542f\u7528') + '</span>' +
                     '</div>' +
                     '<button type="button" class="toggle-btn ' + btnClass + '" data-path="' + escapeHtml(mod.path) + '" data-action="' + action + '">' + btnText + '</button>' +
                     '</div>';
@@ -396,118 +391,107 @@
                 };
                 container.appendChild(card);
             });
-        } catch (e) {
-            container.innerHTML = '<p style="color:var(--red);">Load failed</p>';
-        }
+        }).catch(function(e) {
+            container.innerHTML = '<p style="color:var(--red);">\u52a0\u8f7d\u5931\u8d25</p>';
+        });
     }
 
     function escapeHtml(s) {
-        const div = document.createElement('div');
+        var div = document.createElement('div');
         div.textContent = s;
         return div.innerHTML;
     }
 
-    async function toggleMod(modPath, action) {
+    function toggleMod(modPath, action) {
         if (!selectedChar) return;
-        try {
-            const res = await fetch('/api/toggle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ char: selectedChar, mod: modPath, action: action })
-            });
-            const data = await res.json();
+        fetch('/api/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ char: selectedChar, mod: modPath, action: action })
+        }).then(function(res) { return res.json(); }).then(function(data) {
             if (data.status === 'success') {
                 loadMods(selectedChar);
             } else {
-                alert(data.message || 'Operation failed');
+                alert(data.message || '\u64cd\u4f5c\u5931\u8d25');
             }
-        } catch (e) {
-            alert('Request failed: ' + e.message);
-        }
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
+        });
     }
 
-    async function batchToggle(action) {
+    function batchToggle(action) {
         if (!selectedChar) return;
-        if (!confirm(action === 'enable_all' ? 'Enable all mods?' : 'Disable all mods?')) return;
-        try {
-            const res = await fetch('/api/toggle', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ char: selectedChar, mod: '', action: action })
-            });
-            const data = await res.json();
+        if (!confirm(action === 'enable_all' ? '\u786e\u5b9a\u5168\u90e8\u542f\u7528\uff1f' : '\u786e\u5b9a\u5168\u90e8\u7981\u7528\uff1f')) return;
+        fetch('/api/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ char: selectedChar, mod: '', action: action })
+        }).then(function(res) { return res.json(); }).then(function(data) {
             if (data.status === 'success') {
                 loadMods(selectedChar);
             } else {
-                alert(data.message || 'Operation failed');
+                alert(data.message || '\u64cd\u4f5c\u5931\u8d25');
             }
-        } catch (e) {
-            alert('Request failed: ' + e.message);
-        }
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
+        });
     }
 
-    async function shutdownApp() {
-        if (!confirm('Close Mod Manager?\n\nUnsaved changes will be lost.')) return;
+    function shutdownApp() {
+        if (!confirm('\u786e\u5b9a\u8981\u5173\u95ed Mod \u7ba1\u7406\u5668\u5417\uff1f\n\n\u6240\u6709\u672a\u4fdd\u5b58\u7684\u64cd\u4f5c\u5c06\u4e22\u5931\u3002')) return;
         
-        const btn = document.getElementById('shutdownBtn');
+        var btn = document.getElementById('shutdownBtn');
         btn.disabled = true;
-        btn.textContent = 'Closing...';
+        btn.textContent = '\u5173\u95ed\u4e2d...';
         
-        try {
-            const res = await fetch('/api/shutdown', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ confirm: true })
-            });
-            const data = await res.json();
-            
+        fetch('/api/shutdown', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ confirm: true })
+        }).then(function(res) { return res.json(); }).then(function(data) {
             if (data.status === 'shutting_down') {
-                alert('Closing application...');
+                alert('\u5e94\u7528\u6b63\u5728\u5173\u95ed...');
                 setTimeout(function() {
                     window.close();
                 }, 1000);
             } else {
-                alert('Close failed: ' + (data.message || 'Unknown error'));
+                alert('\u5173\u95ed\u5931\u8d25\uff1a' + (data.message || '\u672a\u77e5\u9519\u8bef'));
                 btn.disabled = false;
-                btn.textContent = 'Close App';
+                btn.textContent = '\u5173\u95ed\u5e94\u7528';
             }
-        } catch (e) {
-            alert('Request failed: ' + e.message);
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
             btn.disabled = false;
-            btn.textContent = 'Close App';
-        }
+            btn.textContent = '\u5173\u95ed\u5e94\u7528';
+        });
     }
 
-    async function openExeFolder() {
-        try {
-            const res = await fetch('/api/open_exe_folder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            const data = await res.json();
+    function openExeFolder() {
+        fetch('/api/open_exe_folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        }).then(function(res) { return res.json(); }).then(function(data) {
             if (data.status !== 'success') {
-                alert('Failed to open folder: ' + (data.message || 'Unknown error'));
+                alert('\u6253\u5f00\u6587\u4ef6\u5939\u5931\u8d25\uff1a' + (data.message || '\u672a\u77e5\u9519\u8bef'));
             }
-        } catch (e) {
-            alert('Request failed: ' + e.message);
-        }
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
+        });
     }
 
-    async function openModsFolder() {
-        try {
-            const res = await fetch('/api/open_mods_folder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            });
-            const data = await res.json();
+    function openModsFolder() {
+        fetch('/api/open_mods_folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        }).then(function(res) { return res.json(); }).then(function(data) {
             if (data.status !== 'success') {
-                alert('Failed to open folder: ' + (data.message || 'Unknown error'));
+                alert('\u6253\u5f00\u6587\u4ef6\u5939\u5931\u8d25\uff1a' + (data.message || '\u672a\u77e5\u9519\u8bef'));
             }
-        } catch (e) {
-            alert('Request failed: ' + e.message);
-        }
+        }).catch(function(e) {
+            alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
+        });
     }
 </script>
 </body>
