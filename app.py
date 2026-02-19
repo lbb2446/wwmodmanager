@@ -56,6 +56,27 @@ def save_config(config):
 
 CONFIG = load_config()
 
+# Favorites storage
+FAVORITES_FILE = os.path.join(get_base_dir(), 'favorites.json')
+
+def load_favorites():
+    if os.path.exists(FAVORITES_FILE):
+        try:
+            with open(FAVORITES_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_favorites(favorites):
+    try:
+        with open(FAVORITES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(favorites, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        print(f"Failed to save favorites: {e}")
+        return False
+
 
 def get_mods_root():
     return os.path.join(get_base_dir(), 'mods')
@@ -254,6 +275,8 @@ def get_mods():
     char_path = os.path.join(mods_root, char_name)
     if not os.path.exists(char_path) or not os.path.isdir(char_path):
         return jsonify([])
+    
+    favorites = load_favorites()
     mods = []
     for folder in os.listdir(char_path):
         full_path = os.path.join(char_path, folder)
@@ -263,14 +286,38 @@ def get_mods():
         has_preview = find_preview_path(full_path) is not None
         preview_url = f"/api/preview?char={quote(char_name)}&mod={quote(folder)}" if has_preview else None
         clean_name = folder.replace("DISABLED_", "", 1) if is_disabled else folder
+        mod_key = f"{char_name}:{folder}"
+        is_favorite = favorites.get(mod_key, False)
         mods.append({
             "name": folder,
             "clean_name": clean_name,
             "disabled": is_disabled,
             "path": folder,
             "preview_url": preview_url,
+            "favorite": is_favorite,
         })
     return jsonify(mods)
+
+@app.route('/api/toggle_favorite', methods=['POST'])
+def toggle_favorite():
+    data = request.json or {}
+    char = data.get('char')
+    mod = data.get('mod')
+    if not char or not mod:
+        return jsonify({"status": "error", "message": "Missing parameters"}), 400
+    
+    favorites = load_favorites()
+    mod_key = f"{char}:{mod}"
+    
+    if mod_key in favorites:
+        del favorites[mod_key]
+        is_favorite = False
+    else:
+        favorites[mod_key] = True
+        is_favorite = True
+    
+    save_favorites(favorites)
+    return jsonify({"status": "success", "favorite": is_favorite})
 
 @app.route('/api/toggle', methods=['POST'])
 def toggle_mod():

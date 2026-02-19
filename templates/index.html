@@ -199,6 +199,7 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            position: relative;
         }
         .mod-card .preview-wrap img {
             width: 100%;
@@ -208,6 +209,32 @@
         .mod-card .preview-wrap .placeholder {
             color: var(--text-dim);
             font-size: 13px;
+        }
+        .mod-card .favorite-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s;
+        }
+        .mod-card .favorite-btn:hover {
+            transform: scale(1.1);
+            background: rgba(0,0,0,0.7);
+        }
+        .mod-card .favorite-btn .heart {
+            color: #666;
+        }
+        .mod-card .favorite-btn .heart.active {
+            color: #ff4757;
         }
         .mod-card .info {
             padding: 12px;
@@ -378,8 +405,10 @@
                 var previewHtml = mod.preview_url
                     ? '<img src="' + mod.preview_url + '" alt="" loading="lazy">'
                     : '<span class="placeholder">\u65e0\u9884\u89c6\u56fe</span>';
+                var heartClass = mod.favorite ? 'heart active' : 'heart';
+                var favoriteBtn = '<button type="button" class="favorite-btn" data-path="' + escapeHtml(mod.path) + '"><span class="' + heartClass + '">&#10084;</span></button>';
                 card.innerHTML =
-                    '<div class="preview-wrap">' + previewHtml + '</div>' +
+                    '<div class="preview-wrap">' + previewHtml + favoriteBtn + '</div>' +
                     '<div class="info">' +
                     '<div class="clean-name">' + escapeHtml(mod.clean_name) + '</div>' +
                     '<div class="status-row">' +
@@ -389,6 +418,9 @@
                     '</div>';
                 card.querySelector('.toggle-btn').onclick = function () {
                     toggleMod(this.dataset.path, this.dataset.action);
+                };
+                card.querySelector('.favorite-btn').onclick = function () {
+                    toggleFavorite(this.dataset.path);
                 };
                 container.appendChild(card);
             });
@@ -435,6 +467,21 @@
             }
         }).catch(function(e) {
             alert('\u8bf7\u6c42\u5931\u8d25\uff1a' + e.message);
+        });
+    }
+
+    function toggleFavorite(modPath) {
+        if (!selectedChar) return;
+        fetch('/api/toggle_favorite', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ char: selectedChar, mod: modPath })
+        }).then(function(res) { return res.json(); }).then(function(data) {
+            if (data.status === 'success') {
+                loadMods(selectedChar);
+            }
+        }).catch(function(e) {
+            console.log('Favorite toggle failed:', e);
         });
     }
 
