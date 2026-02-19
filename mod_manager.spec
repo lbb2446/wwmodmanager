@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# 打包命令: pyinstaller mod_manager.spec
+# Build command: pyinstaller mod_manager.spec
 
 block_cipher = None
 

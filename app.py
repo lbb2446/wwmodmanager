@@ -14,13 +14,11 @@ from urllib.parse import unquote, quote
 
 
 def _base_dir():
-    """Pack dir base for exe; else current working dir"""
     if getattr(sys, 'frozen', False):
         return os.path.dirname(os.path.realpath(sys.executable))
     return os.getcwd()
 
 def _resource_dir():
-    """Resource dir for packaged app; uses _MEIPASS when available"""
     if getattr(sys, 'frozen', False):
         meipass = getattr(sys, '_MEIPASS', None)
         if meipass:
@@ -32,13 +30,11 @@ BASE_DIR = _base_dir()
 RESOURCE_DIR = _resource_dir()
 
 def _exe_dir():
-    """Directory of executable; in dev return project root"""
     if getattr(sys, 'frozen', False):
         return os.path.dirname(os.path.realpath(sys.executable))
     return BASE_DIR
 
 def _enforce_single_app_py():
-    """Ensure repo contains exactly one app.py at root"""
     base = BASE_DIR
     paths = []
     for root, dirs, files in os.walk(base):
@@ -62,15 +58,12 @@ def get_chars_img_dir():
 def get_resource_dir():
     return _resource_dir()
 
-# Convenience aliases for backward compatibility
 MODS_ROOT = get_mods_root()
 CHARS_IMG_DIR = get_chars_img_dir()
 
-# Ensure working dir is repo root when not frozen
 if getattr(sys, 'frozen', False):
     os.chdir(BASE_DIR)
 
-# Init dirs
 mods_root = get_mods_root()
 chars_img_dir = get_chars_img_dir()
 os.makedirs(mods_root, exist_ok=True)
@@ -80,40 +73,35 @@ app = Flask(__name__,
     template_folder=os.path.join(get_resource_dir(), 'templates'),
     static_folder=os.path.join(get_base_dir(), 'static'))
 
-# Global control flags
 server_shutdown = False
 server_thread = None
 
 def signal_handler(signum, frame):
     global server_shutdown
-    print("\n收到关闭信号，正在优雅关闭服务器...")
+    print("\nReceived shutdown signal, closing server gracefully...")
     server_shutdown = True
 
 def cleanup_on_exit():
     global server_shutdown
     server_shutdown = True
-    print("正在清理资源...")
+    print("Cleaning up resources...")
 
-# Register shutdown hooks
 if not getattr(sys, 'frozen', False):
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
 
 def sanitize_filename(name):
-    # Windows illegal chars -> _
     return re.sub(r'[\\/:*?"<>|]', '_', name).strip() or 'unnamed'
 
 PREVIEW_NAMES = ('preview.png', 'preview.jpg', 'preview.jpeg')
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico'}
 
 def find_preview_path(dir_path):
-    # Look for standard preview first
     for name in PREVIEW_NAMES:
         p = os.path.join(dir_path, name)
         if os.path.isfile(p):
             return p
-    # Else any image file
     try:
         for item in os.listdir(dir_path):
             item_path = os.path.join(dir_path, item)
@@ -244,11 +232,11 @@ def toggle_mod():
     mod_name = data.get('mod', '')
     action = data.get('action')
     if not char or not action:
-        return jsonify({"status": "error", "message": "缺少参数"}), 400
+        return jsonify({"status": "error", "message": "Missing parameters"}), 400
     mods_root = get_mods_root()
     char_path = os.path.join(mods_root, char)
     if not os.path.isdir(char_path):
-        return jsonify({"status": "error", "message": "角色目录不存在"}), 404
+        return jsonify({"status": "error", "message": "Character directory not found"}), 404
     def rename_mod(current_name, target_state):
         src = os.path.join(char_path, current_name)
         if not os.path.isdir(src):
@@ -283,31 +271,28 @@ def shutdown_server():
     global server_shutdown
     if request.json and request.json.get('confirm') == True:
         server_shutdown = True
-        return jsonify({"status": "shutting_down", "message": "服务器正在关闭..."})
+        return jsonify({"status": "shutting_down", "message": "Server is shutting down..."})
     else:
-        return jsonify({"status": "error", "message": "需要确认关闭操作"}), 400
+        return jsonify({"status": "error", "message": "Confirmation required"}), 400
 
 @app.route('/api/open_exe_folder', methods=['POST'])
 def open_exe_folder():
-    """Open the folder of the executable (exe) or project root in dev"""
     try:
         target_dir = _exe_dir()
         if not os.path.isdir(target_dir):
-            return jsonify({"status": "error", "message": "目录不存在"}), 404
+            return jsonify({"status": "error", "message": "Directory not found"}), 404
         if sys.platform.startswith('win'):
             os.startfile(target_dir)
         else:
-            if hasattr(__import__('platform'), 'system'):
-                import platform
-                if platform.system() == 'Darwin':
-                    subprocess.Popen(['open', target_dir])
-                else:
-                    subprocess.Popen(['xdg-open', target_dir])
+            import platform
+            if platform.system() == 'Darwin':
+                subprocess.Popen(['open', target_dir])
+            else:
+                subprocess.Popen(['xdg-open', target_dir])
         return jsonify({"status": "success", "path": target_dir})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Development helpers (optional)
 if not getattr(sys, 'frozen', False):
     @app.route('/debug/info')
     def debug_info():
@@ -336,7 +321,7 @@ if not getattr(sys, 'frozen', False):
         return jsonify(routes)
 
 if __name__ == '__main__':
-    DEBUG = True
+    DEBUG = False
     port = 5000
     def run_server():
         global server_shutdown
@@ -345,17 +330,16 @@ if __name__ == '__main__':
             try:
                 waitress.serve(app, host='127.0.0.1', port=port, threads=4)
             except KeyboardInterrupt:
-                print("服务器被用户中断")
+                print("Server interrupted by user")
         else:
             if DEBUG:
-                print("🔧 开发模式已启用")
-                print(f"📍 服务器地址: http://127.0.0.1:{port}")
-                print("🔄 热重载已开启")
+                print("[DEV] Development mode enabled")
+                print(f"[DEV] Server address: http://127.0.0.1:{port}")
+                print("[DEV] Hot reload enabled")
                 app.run(host='127.0.0.1', port=port, debug=True, use_reloader=True)
             else:
                 app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
     def create_window():
-        # Optional: open browser window automatically
         try:
             import time, webbrowser
             url = f'http://127.0.0.1:{port}'
@@ -366,10 +350,8 @@ if __name__ == '__main__':
     if not getattr(sys, 'frozen', False) and DEBUG:
         run_server()
     else:
-        # Production-like flow: run server in separate thread
         server_thread = threading.Thread(target=run_server, daemon=False)
         server_thread.start()
-        # Optional window thread
         window_thread = threading.Thread(target=create_window, daemon=False)
         window_thread.start()
         try:
@@ -380,6 +362,6 @@ if __name__ == '__main__':
                     server_thread.start()
                     time.sleep(2)
         except KeyboardInterrupt:
-            print("收到中断信号，正在停止服务器...")
+            print("Received interrupt signal, stopping server...")
         finally:
-            print("服务器已停止")
+            print("Server stopped")
