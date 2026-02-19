@@ -276,6 +276,50 @@
         .mod-card .toggle-btn.enable { background: var(--green); color: var(--bg); }
         .mod-card .toggle-btn.disable { background: var(--red); color: #fff; }
         .mod-card .toggle-btn:hover { filter: brightness(1.1); }
+        
+        .mod-card .action-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .mod-card .readme-btn {
+            flex: 1;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,.1);
+            background: var(--surface-hover);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 12px;
+            position: relative;
+        }
+        .mod-card .readme-btn:hover {
+            background: var(--accent);
+            color: var(--bg);
+        }
+        .mod-card .readme-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            margin-bottom: 8px;
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.5;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .mod-card .readme-btn:hover .readme-tooltip {
+            display: block;
+        }
 
         #emptyState {
             padding: 48px 24px;
@@ -407,6 +451,9 @@
                     : '<span class="placeholder">\u65e0\u9884\u89c6\u56fe</span>';
                 var heartClass = mod.favorite ? 'heart active' : 'heart';
                 var favoriteBtn = '<button type="button" class="favorite-btn" data-path="' + escapeHtml(mod.path) + '"><span class="' + heartClass + '">&#10084;</span></button>';
+                var readmeBtn = mod.has_readme 
+                    ? '<button type="button" class="readme-btn" data-path="' + escapeHtml(mod.path) + '">\u67e5\u770b\u7b80\u4ecb<span class="readme-tooltip">\u52a0\u8f7d\u4e2d...</span></button>'
+                    : '';
                 card.innerHTML =
                     '<div class="preview-wrap">' + previewHtml + favoriteBtn + '</div>' +
                     '<div class="info">' +
@@ -414,6 +461,7 @@
                     '<div class="status-row">' +
                     '<span><span class="status-dot ' + (mod.disabled ? 'off' : 'on') + '"></span>' + (mod.disabled ? '\u672a\u542f\u7528' : '\u5df2\u542f\u7528') + '</span>' +
                     '</div>' +
+                    (readmeBtn ? '<div class="action-row">' + readmeBtn + '</div>' : '') +
                     '<button type="button" class="toggle-btn ' + btnClass + '" data-path="' + escapeHtml(mod.path) + '" data-action="' + action + '">' + btnText + '</button>' +
                     '</div>';
                 card.querySelector('.toggle-btn').onclick = function () {
@@ -422,6 +470,12 @@
                 card.querySelector('.favorite-btn').onclick = function () {
                     toggleFavorite(this.dataset.path);
                 };
+                if (mod.has_readme) {
+                    var readmeBtnEl = card.querySelector('.readme-btn');
+                    readmeBtnEl.onmouseenter = function() {
+                        loadReadme(this.dataset.path, this.querySelector('.readme-tooltip'));
+                    };
+                }
                 container.appendChild(card);
             });
         }).catch(function(e) {
@@ -482,6 +536,22 @@
             }
         }).catch(function(e) {
             console.log('Favorite toggle failed:', e);
+        });
+    }
+
+    function loadReadme(modPath, tooltipEl) {
+        if (!selectedChar || !tooltipEl) return;
+        if (tooltipEl.dataset.loaded === 'true') return;
+        
+        fetch('/api/get_readme?char=' + encodeURIComponent(selectedChar) + '&mod=' + encodeURIComponent(modPath)).then(function(res) { return res.json(); }).then(function(data) {
+            if (data.status === 'success') {
+                tooltipEl.textContent = data.content || '\u65e0\u5185\u5bb9';
+                tooltipEl.dataset.loaded = 'true';
+            } else {
+                tooltipEl.textContent = '\u52a0\u8f7d\u5931\u8d25';
+            }
+        }).catch(function(e) {
+            tooltipEl.textContent = '\u52a0\u8f7d\u5931\u8d25';
         });
     }
 

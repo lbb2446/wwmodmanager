@@ -288,6 +288,14 @@ def get_mods():
         clean_name = folder.replace("DISABLED_", "", 1) if is_disabled else folder
         mod_key = f"{char_name}:{folder}"
         is_favorite = favorites.get(mod_key, False)
+        
+        # Check for txt files (readme, description, etc.)
+        has_readme = False
+        for item in os.listdir(full_path):
+            if item.lower().endswith('.txt'):
+                has_readme = True
+                break
+        
         mods.append({
             "name": folder,
             "clean_name": clean_name,
@@ -295,8 +303,45 @@ def get_mods():
             "path": folder,
             "preview_url": preview_url,
             "favorite": is_favorite,
+            "has_readme": has_readme,
         })
     return jsonify(mods)
+
+@app.route('/api/get_readme', methods=['GET'])
+def get_readme():
+    char = request.args.get('char')
+    mod = request.args.get('mod')
+    if not char or not mod:
+        return jsonify({"status": "error", "message": "Missing parameters"}), 400
+    
+    char = unquote(char)
+    mod = unquote(mod)
+    mod_path = os.path.join(get_mods_root(), char, mod)
+    
+    if not os.path.isdir(mod_path):
+        return jsonify({"status": "error", "message": "MOD not found"}), 404
+    
+    # Find txt file
+    txt_file = None
+    for item in os.listdir(mod_path):
+        if item.lower().endswith('.txt'):
+            txt_file = os.path.join(mod_path, item)
+            break
+    
+    if not txt_file:
+        return jsonify({"status": "error", "message": "No readme found"}), 404
+    
+    try:
+        with open(txt_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return jsonify({"status": "success", "content": content, "filename": os.path.basename(txt_file)})
+    except Exception as e:
+        try:
+            with open(txt_file, 'r', encoding='gbk') as f:
+                content = f.read()
+            return jsonify({"status": "success", "content": content, "filename": os.path.basename(txt_file)})
+        except Exception as e2:
+            return jsonify({"status": "error", "message": str(e2)}), 500
 
 @app.route('/api/toggle_favorite', methods=['POST'])
 def toggle_favorite():
