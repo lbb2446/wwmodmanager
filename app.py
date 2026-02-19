@@ -14,10 +14,24 @@ from flask import Flask, render_template, jsonify, request, send_file
 from urllib.parse import unquote, quote
 
 
+def is_frozen():
+    return getattr(sys, 'frozen', False)
+
+
+def get_exe_dir():
+    if is_frozen():
+        return os.path.dirname(os.path.realpath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_base_dir():
+    return get_exe_dir()
+
+
 DEFAULT_CONFIG = {
     "app_title": "Mod Manager",
     "app_name": "Mod Manager",
-    "icon_path": "icon.ico"
+    "icon_path": "icon.png"
 }
 
 def load_config():
@@ -41,20 +55,6 @@ def save_config(config):
         return False
 
 CONFIG = load_config()
-
-
-def is_frozen():
-    return getattr(sys, 'frozen', False)
-
-
-def get_exe_dir():
-    if is_frozen():
-        return os.path.dirname(os.path.realpath(sys.executable))
-    return os.path.dirname(os.path.abspath(__file__))
-
-
-def get_base_dir():
-    return get_exe_dir()
 
 
 def get_mods_root():
