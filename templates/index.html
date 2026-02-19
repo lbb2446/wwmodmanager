@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>游戏 Mod 管理助手</title>
+    <title>Mod Manager</title>
     <style>
         :root {
             --bg: #1a1b26;
@@ -57,6 +57,25 @@
         }
         #syncBtn:hover { filter: brightness(1.1); }
         #syncBtn:disabled { opacity: 0.7; cursor: not-allowed; }
+        #folderActions {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255,255,255,.06);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .folder-btn {
+            width: 100%;
+            padding: 8px 16px;
+            background: var(--surface-hover);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .folder-btn:hover { filter: brightness(1.1); background: var(--accent); color: var(--bg); }
         #shutdownWrap {
             padding: 12px 16px;
             border-top: 1px solid rgba(255,255,255,.06);
@@ -242,38 +261,38 @@
 <body>
 
 <div id="sidebar">
-    <h1>🎮 Mod 管理助手</h1>
+    <h1>Mod Manager</h1>
     <div id="syncWrap">
-        <button id="syncBtn" type="button" onclick="syncChars()">初始化 / 同步角色</button>
+        <button id="syncBtn" type="button" onclick="syncChars()">Sync Characters</button>
     </div>
-    <div id="openFolderWrap" style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.06);">
-        <button id="openFolderBtn" type="button" onclick="openExeFolder()">打开文件夹</button>
+    <div id="folderActions">
+        <button class="folder-btn" type="button" onclick="openModsFolder()">Open Mods Folder</button>
+        <button class="folder-btn" type="button" onclick="openExeFolder()">Open App Folder</button>
     </div>
     <div id="charList"></div>
     <div id="shutdownWrap">
-        <button id="shutdownBtn" type="button" onclick="shutdownApp()">关闭应用</button>
+        <button id="shutdownBtn" type="button" onclick="shutdownApp()">Close App</button>
     </div>
 </div>
 
 <div id="main">
     <div id="mainHead">
-        <h2 id="currentChar">请选择左侧角色</h2>
+        <h2 id="currentChar">Select a character</h2>
         <div id="batchActions" class="batch-actions">
-            <button type="button" class="btn-enable" onclick="batchToggle('enable_all')">全部启用</button>
-            <button type="button" class="btn-disable" onclick="batchToggle('disable_all')">全部禁用</button>
+            <button type="button" class="btn-enable" onclick="batchToggle('enable_all')">Enable All</button>
+            <button type="button" class="btn-disable" onclick="batchToggle('disable_all')">Disable All</button>
         </div>
     </div>
     <div id="modList"></div>
     <div id="emptyState" style="display:none;">
-        <p>该角色下暂无 Mod，或尚未选择角色。</p>
-        <p>可将 Mod 文件夹放入对应角色目录，或先点击「初始化/同步角色」从接口拉取角色列表。</p>
+        <p>No mods for this character.</p>
+        <p>Place mod folders in the character directory, or click "Sync Characters" first.</p>
     </div>
 </div>
 
 <script>
     let selectedChar = null;
 
-    // 页面加载时拉取角色列表
     document.addEventListener('DOMContentLoaded', loadChars);
 
     async function loadChars() {
@@ -283,7 +302,7 @@
             const chars = await res.json();
             listEl.innerHTML = '';
             if (chars.length === 0) {
-                listEl.innerHTML = '<p style="padding:12px;color:var(--text-dim);font-size:13px;">暂无角色，请先点击「初始化/同步角色」</p>';
+                listEl.innerHTML = '<p style="padding:12px;color:var(--text-dim);font-size:13px;">No characters. Click "Sync Characters" first.</p>';
                 return;
             }
             chars.forEach(function (c) {
@@ -299,7 +318,7 @@
                 listEl.appendChild(div);
             });
         } catch (e) {
-            listEl.innerHTML = '<p style="padding:12px;color:var(--red);">加载失败</p>';
+            listEl.innerHTML = '<p style="padding:12px;color:var(--red);">Load failed</p>';
         }
     }
 
@@ -312,7 +331,7 @@
     async function syncChars() {
         const btn = document.getElementById('syncBtn');
         btn.disabled = true;
-        btn.textContent = '同步中…';
+        btn.textContent = 'Syncing...';
         try {
             const res = await fetch('/api/sync_chars', { method: 'POST' });
             const text = await res.text();
@@ -320,20 +339,20 @@
             try {
                 data = JSON.parse(text);
             } catch (_) {
-                alert('服务器返回异常：' + (res.ok ? '非 JSON' : 'HTTP ' + res.status));
+                alert('Server error: ' + (res.ok ? 'Invalid JSON' : 'HTTP ' + res.status));
                 return;
             }
             if (data.status === 'success') {
                 await loadChars();
-                alert('同步完成，共 ' + data.count + ' 个角色');
+                alert('Sync complete: ' + data.count + ' characters');
             } else {
-                alert('同步失败：' + (data.message || '未知错误'));
+                alert('Sync failed: ' + (data.message || 'Unknown error'));
             }
         } catch (e) {
-            alert('请求失败：' + e.message);
+            alert('Request failed: ' + e.message);
         } finally {
             btn.disabled = false;
-            btn.textContent = '初始化 / 同步角色';
+            btn.textContent = 'Sync Characters';
         }
     }
 
@@ -345,7 +364,7 @@
         setActiveChar(charName);
 
         const container = document.getElementById('modList');
-        container.innerHTML = '<p style="color:var(--text-dim);">加载中…</p>';
+        container.innerHTML = '<p style="color:var(--text-dim);">Loading...</p>';
         try {
             const res = await fetch('/api/get_mods?char=' + encodeURIComponent(charName));
             const mods = await res.json();
@@ -359,16 +378,16 @@
                 card.className = 'mod-card' + (mod.disabled ? ' disabled' : '');
                 const action = mod.disabled ? 'enable' : 'disable';
                 const btnClass = mod.disabled ? 'enable' : 'disable';
-                const btnText = mod.disabled ? '启用' : '禁用';
+                const btnText = mod.disabled ? 'Enable' : 'Disable';
                 const previewHtml = mod.preview_url
                     ? '<img src="' + mod.preview_url + '" alt="" loading="lazy">'
-                    : '<span class="placeholder">无预览图</span>';
+                    : '<span class="placeholder">No preview</span>';
                 card.innerHTML =
                     '<div class="preview-wrap">' + previewHtml + '</div>' +
                     '<div class="info">' +
                     '<div class="clean-name">' + escapeHtml(mod.clean_name) + '</div>' +
                     '<div class="status-row">' +
-                    '<span><span class="status-dot ' + (mod.disabled ? 'off' : 'on') + '"></span>' + (mod.disabled ? '未启用' : '已启用') + '</span>' +
+                    '<span><span class="status-dot ' + (mod.disabled ? 'off' : 'on') + '"></span>' + (mod.disabled ? 'Disabled' : 'Enabled') + '</span>' +
                     '</div>' +
                     '<button type="button" class="toggle-btn ' + btnClass + '" data-path="' + escapeHtml(mod.path) + '" data-action="' + action + '">' + btnText + '</button>' +
                     '</div>';
@@ -378,7 +397,7 @@
                 container.appendChild(card);
             });
         } catch (e) {
-            container.innerHTML = '<p style="color:var(--red);">加载失败</p>';
+            container.innerHTML = '<p style="color:var(--red);">Load failed</p>';
         }
     }
 
@@ -400,16 +419,16 @@
             if (data.status === 'success') {
                 loadMods(selectedChar);
             } else {
-                alert(data.message || '操作失败');
+                alert(data.message || 'Operation failed');
             }
         } catch (e) {
-            alert('请求失败：' + e.message);
+            alert('Request failed: ' + e.message);
         }
     }
 
     async function batchToggle(action) {
         if (!selectedChar) return;
-        if (!confirm(action === 'enable_all' ? '确定全部启用？' : '确定全部禁用？')) return;
+        if (!confirm(action === 'enable_all' ? 'Enable all mods?' : 'Disable all mods?')) return;
         try {
             const res = await fetch('/api/toggle', {
                 method: 'POST',
@@ -420,19 +439,19 @@
             if (data.status === 'success') {
                 loadMods(selectedChar);
             } else {
-                alert(data.message || '操作失败');
+                alert(data.message || 'Operation failed');
             }
         } catch (e) {
-            alert('请求失败：' + e.message);
+            alert('Request failed: ' + e.message);
         }
     }
 
     async function shutdownApp() {
-        if (!confirm('确定要关闭 Mod 管理器吗？\n\n所有未保存的操作将会丢失。')) return;
+        if (!confirm('Close Mod Manager?\n\nUnsaved changes will be lost.')) return;
         
         const btn = document.getElementById('shutdownBtn');
         btn.disabled = true;
-        btn.textContent = '关闭中...';
+        btn.textContent = 'Closing...';
         
         try {
             const res = await fetch('/api/shutdown', {
@@ -443,41 +462,53 @@
             const data = await res.json();
             
             if (data.status === 'shutting_down') {
-                // 服务器正在关闭，关闭浏览器窗口
-                alert('应用正在关闭...');
-                setTimeout(() => {
+                alert('Closing application...');
+                setTimeout(function() {
                     window.close();
                 }, 1000);
             } else {
-                alert('关闭失败：' + (data.message || '未知错误'));
+                alert('Close failed: ' + (data.message || 'Unknown error'));
                 btn.disabled = false;
-                btn.textContent = '关闭应用';
+                btn.textContent = 'Close App';
             }
         } catch (e) {
-            alert('请求失败：' + e.message);
+            alert('Request failed: ' + e.message);
             btn.disabled = false;
-            btn.textContent = '关闭应用';
-    }
-}
-
-async function openExeFolder() {
-    try {
-        const res = await fetch('/api/open_exe_folder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            // 浏览器端无法直接确认已打开文件夹，但服务器端已请求打开
-            console.log('打开文件夹请求已发送，路径:', data.path);
-        } else {
-            alert('打开文件夹失败：' + (data.message || '未知错误'));
+            btn.textContent = 'Close App';
         }
-    } catch (e) {
-        alert('打开文件夹请求失败：' + e.message);
     }
-}
+
+    async function openExeFolder() {
+        try {
+            const res = await fetch('/api/open_exe_folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                alert('Failed to open folder: ' + (data.message || 'Unknown error'));
+            }
+        } catch (e) {
+            alert('Request failed: ' + e.message);
+        }
+    }
+
+    async function openModsFolder() {
+        try {
+            const res = await fetch('/api/open_mods_folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (data.status !== 'success') {
+                alert('Failed to open folder: ' + (data.message || 'Unknown error'));
+            }
+        } catch (e) {
+            alert('Request failed: ' + e.message);
+        }
+    }
 </script>
 </body>
 </html>

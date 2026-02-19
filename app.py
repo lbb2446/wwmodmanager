@@ -13,61 +13,53 @@ from flask import Flask, render_template, jsonify, request, send_file
 from urllib.parse import unquote, quote
 
 
-def _base_dir():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(os.path.realpath(sys.executable))
-    return os.getcwd()
+def is_frozen():
+    return getattr(sys, 'frozen', False)
 
-def _resource_dir():
-    if getattr(sys, 'frozen', False):
-        meipass = getattr(sys, '_MEIPASS', None)
-        if meipass:
-            return meipass
+
+def get_exe_dir():
+    if is_frozen():
         return os.path.dirname(os.path.realpath(sys.executable))
     return os.path.dirname(os.path.abspath(__file__))
 
-BASE_DIR = _base_dir()
-RESOURCE_DIR = _resource_dir()
-
-def _exe_dir():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(os.path.realpath(sys.executable))
-    return BASE_DIR
-
-def _enforce_single_app_py():
-    base = BASE_DIR
-    paths = []
-    for root, dirs, files in os.walk(base):
-        if 'app.py' in files:
-            paths.append(os.path.join(root, 'app.py'))
-    if len(paths) != 1 or os.path.basename(paths[0]) != 'app.py':
-        print(f"Constraint violation: app.py must exist exactly once at repo root. Found: {paths}", file=sys.stderr)
-        sys.exit(1)
 
 def get_base_dir():
-    return _base_dir()
+    return get_exe_dir()
+
 
 def get_mods_root():
-    base_dir = get_base_dir()
-    return os.path.join(base_dir, 'mods')
+    return os.path.join(get_base_dir(), 'mods')
+
 
 def get_chars_img_dir():
-    base_dir = get_base_dir()
-    return os.path.join(base_dir, 'static', 'chars')
+    return os.path.join(get_base_dir(), 'static', 'chars')
+
 
 def get_resource_dir():
-    return _resource_dir()
+    if is_frozen():
+        meipass = getattr(sys, '_MEIPASS', None)
+        if meipass:
+            return meipass
+    return os.path.dirname(os.path.abspath(__file__))
 
-MODS_ROOT = get_mods_root()
-CHARS_IMG_DIR = get_chars_img_dir()
 
-if getattr(sys, 'frozen', False):
-    os.chdir(BASE_DIR)
+def _enforce_single_app_py():
+    if not is_frozen():
+        base = get_base_dir()
+        paths = []
+        for root, dirs, files in os.walk(base):
+            if 'app.py' in files:
+                paths.append(os.path.join(root, 'app.py'))
+        if len(paths) != 1 or os.path.basename(paths[0]) != 'app.py':
+            print(f"Constraint violation: app.py must exist exactly once at repo root. Found: {paths}", file=sys.stderr)
+            sys.exit(1)
 
-mods_root = get_mods_root()
-chars_img_dir = get_chars_img_dir()
-os.makedirs(mods_root, exist_ok=True)
-os.makedirs(chars_img_dir, exist_ok=True)
+
+if is_frozen():
+    os.chdir(get_base_dir())
+
+os.makedirs(get_mods_root(), exist_ok=True)
+os.makedirs(get_chars_img_dir(), exist_ok=True)
 
 app = Flask(__name__,
     template_folder=os.path.join(get_resource_dir(), 'templates'),
@@ -86,7 +78,7 @@ def cleanup_on_exit():
     server_shutdown = True
     print("Cleaning up resources...")
 
-if not getattr(sys, 'frozen', False):
+if not is_frozen():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_on_exit)
@@ -116,6 +108,18 @@ def find_preview_path(dir_path):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/debug_info', methods=['GET'])
+def debug_info():
+    return jsonify({
+        "is_frozen": is_frozen(),
+        "exe_dir": get_exe_dir(),
+        "base_dir": get_base_dir(),
+        "mods_root": get_mods_root(),
+        "chars_img_dir": get_chars_img_dir(),
+        "resource_dir": get_resource_dir(),
+        "cwd": os.getcwd(),
+    })
 
 @app.route('/api/chars', methods=['GET'])
 def get_chars():
@@ -278,7 +282,7 @@ def shutdown_server():
 @app.route('/api/open_exe_folder', methods=['POST'])
 def open_exe_folder():
     try:
-        target_dir = _exe_dir()
+        target_dir = get_exe_dir()
         if not os.path.isdir(target_dir):
             return jsonify({"status": "error", "message": "Directory not found"}), 404
         if sys.platform.startswith('win'):
@@ -293,9 +297,27 @@ def open_exe_folder():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-if not getattr(sys, 'frozen', False):
+@app.route('/api/open_mods_folder', methods=['POST'])
+def open_mods_folder():
+    try:
+        target_dir = get_mods_root()
+        if not os.path.isdir(target_dir):
+            os.makedirs(target_dir, exist_ok=True)
+        if sys.platform.startswith('win'):
+            os.startfile(target_dir)
+        else:
+            import platform
+            if platform.system() == 'Darwin':
+                subprocess.Popen(['open', target_dir])
+            else:
+                subprocess.Popen(['xdg-open', target_dir])
+        return jsonify({"status": "success", "path": target_dir})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+if not is_frozen():
     @app.route('/debug/info')
-    def debug_info():
+    def debug_info_dev():
         import platform
         import flask
         return jsonify({
@@ -320,12 +342,55 @@ if not getattr(sys, 'frozen', False):
             })
         return jsonify(routes)
 
+def create_app_window(url):
+    edge_paths = [
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES', ''), 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    ]
+    edge_exe = None
+    for path in edge_paths:
+        if os.path.exists(path):
+            edge_exe = path
+            break
+    
+    chrome_paths = [
+        os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        os.path.join(os.environ.get('PROGRAMFILES', ''), 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    ]
+    chrome_exe = None
+    for path in chrome_paths:
+        if os.path.exists(path):
+            chrome_exe = path
+            break
+
+    if edge_exe:
+        subprocess.Popen([
+            edge_exe,
+            '--app=' + url,
+            '--window-size=1400,900',
+            '--disable-extensions',
+            '--disable-infobars',
+        ])
+        return True
+    elif chrome_exe:
+        subprocess.Popen([
+            chrome_exe,
+            '--app=' + url,
+            '--window-size=1400,900',
+            '--disable-extensions',
+        ])
+        return True
+    return False
+
 if __name__ == '__main__':
-    DEBUG = False
+    _enforce_single_app_py()
+    
+    DEBUG = not is_frozen()
     port = 5000
+    
     def run_server():
         global server_shutdown
-        if getattr(sys, 'frozen', False):
+        if is_frozen():
             import waitress
             try:
                 waitress.serve(app, host='127.0.0.1', port=port, threads=4)
@@ -339,15 +404,34 @@ if __name__ == '__main__':
                 app.run(host='127.0.0.1', port=port, debug=True, use_reloader=True)
             else:
                 app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
+    
     def create_window():
-        try:
-            import time, webbrowser
-            url = f'http://127.0.0.1:{port}'
-            time.sleep(1)
+        url = f'http://127.0.0.1:{port}'
+        wait_time = 2.0 if is_frozen() else 1.0
+        time.sleep(wait_time)
+        
+        max_retries = 10
+        for i in range(max_retries):
+            try:
+                response = requests.get(url, timeout=1)
+                if response.status_code == 200:
+                    break
+            except:
+                if i == max_retries - 1:
+                    import webbrowser
+                    webbrowser.open(url)
+                    return
+                time.sleep(0.5)
+        
+        if is_frozen():
+            if not create_app_window(url):
+                import webbrowser
+                webbrowser.open(url)
+        else:
+            import webbrowser
             webbrowser.open(url)
-        except Exception:
-            pass
-    if not getattr(sys, 'frozen', False) and DEBUG:
+    
+    if not is_frozen() and DEBUG:
         run_server()
     else:
         server_thread = threading.Thread(target=run_server, daemon=False)
