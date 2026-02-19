@@ -246,6 +246,9 @@
     <div id="syncWrap">
         <button id="syncBtn" type="button" onclick="syncChars()">初始化 / 同步角色</button>
     </div>
+    <div id="openFolderWrap" style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.06);">
+        <button id="openFolderBtn" type="button" onclick="openExeFolder()">打开文件夹</button>
+    </div>
     <div id="charList"></div>
     <div id="shutdownWrap">
         <button id="shutdownBtn" type="button" onclick="shutdownApp()">关闭应用</button>
@@ -454,8 +457,27 @@
             alert('请求失败：' + e.message);
             btn.disabled = false;
             btn.textContent = '关闭应用';
-        }
     }
+}
+
+async function openExeFolder() {
+    try {
+        const res = await fetch('/api/open_exe_folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            // 浏览器端无法直接确认已打开文件夹，但服务器端已请求打开
+            console.log('打开文件夹请求已发送，路径:', data.path);
+        } else {
+            alert('打开文件夹失败：' + (data.message || '未知错误'));
+        }
+    } catch (e) {
+        alert('打开文件夹请求失败：' + e.message);
+    }
+}
 </script>
 </body>
 </html>
