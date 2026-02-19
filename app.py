@@ -31,6 +31,21 @@ def _resource_dir():
 BASE_DIR = _base_dir()
 RESOURCE_DIR = _resource_dir()
 
+# 约束：在本仓库中只能存在一个 app.py，且必须位于仓库根目录
+def _enforce_single_app_py():
+    base = BASE_DIR
+    paths = []
+    for root, dirs, files in os.walk(base):
+        if 'app.py' in files:
+            paths.append(os.path.join(root, 'app.py'))
+    # 仅允许当前项目根目录下的 app.py 存在且唯一
+    if len(paths) != 1 or os.path.basename(paths[0]) != 'app.py':
+        print(
+            f"约束检查失败: 找到 app.py 文件数量为 {len(paths)}，应为 1。路径列表: {paths}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 # 动态获取路径的函数，确保每次运行都使用正确的 exe 位置
 def get_base_dir():
     """动态获取基础目录"""
@@ -350,6 +365,8 @@ if not getattr(sys, 'frozen', False):
 
 
 if __name__ == '__main__':
+    # 开始服务前，确保满足不变约束
+    _enforce_single_app_py()
     # 开发模式配置
     DEBUG = True  # 设置为 False 进入生产模式
     port = 5000

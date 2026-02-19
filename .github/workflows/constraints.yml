@@ -1,0 +1,37 @@
+name: Constraints
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited]
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  enforce-constraints:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run constraint checks (local script)
+        run: |
+          python3 scripts/validate_constraints.py
+      - name: Ensure app.py is unique in repo
+        run: |
+          count=$(git ls-files app.py | wc -l)
+          if [ "$count" -ne 1 ]; then
+            echo "Constraint violation: app.py must exist exactly once at repo root" >&2
+            exit 1
+          fi
+      - name: Check PR body references business requirements (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          BODY="${{ github.event.pull_request.body }}"
+          if [[ -z "$BODY" || ( "$BODY" != *docs/需求文档/业务需求.md* && "$BODY" != *业务需求.md* ) ]]; then
+            echo "Constraint violation: PR body must reference 业务需求.md" >&2
+            exit 1
+          fi
