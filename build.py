@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import subprocess
+import re
 
 def main():
     # Read config
@@ -17,36 +18,21 @@ def main():
     print(f"App Name: {app_name}")
     print(f"Icon: {icon_path}")
     
-    # Read and modify spec file
+    # Read spec file
     spec_path = os.path.join(os.path.dirname(__file__), 'mod_manager.spec')
     with open(spec_path, 'r', encoding='utf-8') as f:
         spec_content = f.read()
     
-    # Replace name
-    spec_content = spec_content.replace("name='ModManager'", f"name='{app_name}'")
-    spec_content = spec_content.replace('name="ModManager"', f'name="{app_name}"')
+    # Replace name in EXE section
+    spec_content = re.sub(r"name='ModManager'", f"name='{app_name}'", spec_content)
     
-    # Replace icon - only if icon file exists
+    # Add icon if file exists
     if os.path.exists(icon_path):
-        # Find the EXE section and add icon parameter
+        # Find the EXE line with name and add icon after it
+        pattern = r"(name='[^']+',)(\s*\n\s*)"
+        replacement = r"\1\n    icon='" + icon_path + "',\2"
         if 'icon=' not in spec_content:
-            spec_content = spec_content.replace(
-                "name='ModManager',",
-                f"name='{app_name}',"
-            )
-            # Add icon after name in EXE
-            lines = spec_content.split('\n')
-            new_lines = []
-            for line in lines:
-                if f"name='{app_name}'" in line and 'icon=' not in line:
-                    # Add icon parameter
-                    line = line.rstrip()
-                    if line.endswith(','):
-                        line = line + f"\n    icon='{icon_path}',"
-                    else:
-                        line = line + f",\n    icon='{icon_path}',"
-                new_lines.append(line)
-            spec_content = '\n'.join(new_lines)
+            spec_content = re.sub(pattern, replacement, spec_content)
     
     # Write modified spec
     with open(spec_path, 'w', encoding='utf-8') as f:
