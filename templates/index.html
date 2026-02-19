@@ -282,8 +282,12 @@
             gap: 8px;
             margin-bottom: 10px;
         }
-        .mod-card .readme-btn {
+        .mod-card .readme-wrapper {
             flex: 1;
+            position: relative;
+        }
+        .mod-card .readme-btn {
+            width: 100%;
             padding: 6px;
             border-radius: 6px;
             border: 1px solid rgba(255,255,255,.1);
@@ -291,22 +295,21 @@
             color: var(--text);
             cursor: pointer;
             font-size: 12px;
-            position: relative;
         }
-        .mod-card .readme-btn:hover {
+        .mod-card .readme-wrapper:hover .readme-btn {
             background: var(--accent);
             color: var(--bg);
         }
         .mod-card .readme-tooltip {
             display: none;
             position: absolute;
-            bottom: 100%;
+            bottom: calc(100% + 8px);
             left: 0;
             right: 0;
-            margin-bottom: 8px;
             padding: 12px;
-            background: var(--bg);
-            border: 1px solid rgba(255,255,255,.1);
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid rgba(255,255,255,.2);
             border-radius: 6px;
             font-size: 12px;
             line-height: 1.5;
@@ -315,10 +318,18 @@
             white-space: pre-wrap;
             word-break: break-all;
             z-index: 100;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
-        .mod-card .readme-btn:hover .readme-tooltip {
+        .mod-card .readme-wrapper:hover .readme-tooltip {
             display: block;
+        }
+        .mod-card .readme-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 20px;
+            border: 6px solid transparent;
+            border-top-color: var(--surface);
         }
 
         #emptyState {
@@ -452,7 +463,7 @@
                 var heartClass = mod.favorite ? 'heart active' : 'heart';
                 var favoriteBtn = '<button type="button" class="favorite-btn" data-path="' + escapeHtml(mod.path) + '"><span class="' + heartClass + '">&#10084;</span></button>';
                 var readmeBtn = mod.has_readme 
-                    ? '<button type="button" class="readme-btn" data-path="' + escapeHtml(mod.path) + '">\u67e5\u770b\u7b80\u4ecb<span class="readme-tooltip">\u52a0\u8f7d\u4e2d...</span></button>'
+                    ? '<div class="readme-wrapper"><button type="button" class="readme-btn" data-path="' + escapeHtml(mod.path) + '">\u67e5\u770b\u7b80\u4ecb</button><span class="readme-tooltip">\u52a0\u8f7d\u4e2d...</span></div>'
                     : '';
                 card.innerHTML =
                     '<div class="preview-wrap">' + previewHtml + favoriteBtn + '</div>' +
@@ -471,9 +482,11 @@
                     toggleFavorite(this.dataset.path);
                 };
                 if (mod.has_readme) {
-                    var readmeBtnEl = card.querySelector('.readme-btn');
-                    readmeBtnEl.onmouseenter = function() {
-                        loadReadme(this.dataset.path, this.querySelector('.readme-tooltip'));
+                    var readmeWrapper = card.querySelector('.readme-wrapper');
+                    readmeWrapper.onmouseenter = function() {
+                        var btn = this.querySelector('.readme-btn');
+                        var tooltip = this.querySelector('.readme-tooltip');
+                        loadReadme(btn.dataset.path, tooltip);
                     };
                 }
                 container.appendChild(card);
