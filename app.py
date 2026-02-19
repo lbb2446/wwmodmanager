@@ -363,22 +363,28 @@ def create_app_window(url):
             chrome_exe = path
             break
 
+    CREATE_NO_WINDOW = 0x08000000 if sys.platform == 'win32' else 0
+    
     if edge_exe:
         subprocess.Popen([
             edge_exe,
+            '--new-window',
             '--app=' + url,
             '--window-size=1400,900',
             '--disable-extensions',
             '--disable-infobars',
-        ])
+            '--disable-popup-blocking',
+        ], creationflags=CREATE_NO_WINDOW)
         return True
     elif chrome_exe:
         subprocess.Popen([
             chrome_exe,
+            '--new-window',
             '--app=' + url,
             '--window-size=1400,900',
             '--disable-extensions',
-        ])
+            '--disable-popup-blocking',
+        ], creationflags=CREATE_NO_WINDOW)
         return True
     return False
 

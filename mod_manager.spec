@@ -10,6 +10,8 @@ a = Analysis(
     datas=[
         ('templates', 'templates'),
         ('static', 'static'),
+        ('mods', 'mods'),
+        ('docs', 'docs'),
     ],
     hiddenimports=['flask', 'requests', 'werkzeug', 'jinja2', 'click', 'itsdangerous', 'blinker', 'waitress'],
     hookspath=[],
