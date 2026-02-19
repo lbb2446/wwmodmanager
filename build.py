@@ -24,15 +24,18 @@ def main():
         spec_content = f.read()
     
     # Replace name in EXE section
-    spec_content = re.sub(r"name='ModManager'", f"name='{app_name}'", spec_content)
+    spec_content = spec_content.replace("name='ModManager'", f"name='{app_name}'")
     
     # Add icon if file exists
     if os.path.exists(icon_path):
-        # Find the EXE line with name and add icon after it
-        pattern = r"(name='[^']+',)(\s*\n\s*)"
-        replacement = r"\1\n    icon='" + icon_path + "',\2"
-        if 'icon=' not in spec_content:
-            spec_content = re.sub(pattern, replacement, spec_content)
+        # Find the line with name='app_name' and add icon on next line
+        lines = spec_content.split('\n')
+        new_lines = []
+        for i, line in enumerate(lines):
+            new_lines.append(line)
+            if f"name='{app_name}'" in line and 'icon=' not in line:
+                new_lines.append(f"    icon='{icon_path}',")
+        spec_content = '\n'.join(new_lines)
     
     # Write modified spec
     with open(spec_path, 'w', encoding='utf-8') as f:
