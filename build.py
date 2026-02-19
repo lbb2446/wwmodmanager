@@ -4,7 +4,6 @@ import json
 import os
 import sys
 import subprocess
-import re
 
 def main():
     # Read config
@@ -26,14 +25,14 @@ def main():
     # Replace name in EXE section
     spec_content = spec_content.replace("name='ModManager'", f"name='{app_name}'")
     
-    # Add icon if file exists
-    if os.path.exists(icon_path):
+    # Add icon if file exists and icon not already in spec
+    if os.path.exists(icon_path) and 'icon=' not in spec_content:
         # Find the line with name='app_name' and add icon on next line
         lines = spec_content.split('\n')
         new_lines = []
         for i, line in enumerate(lines):
             new_lines.append(line)
-            if f"name='{app_name}'" in line and 'icon=' not in line:
+            if f"name='{app_name}'" in line:
                 new_lines.append(f"    icon='{icon_path}',")
         spec_content = '\n'.join(new_lines)
     

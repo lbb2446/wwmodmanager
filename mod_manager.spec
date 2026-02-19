@@ -13,7 +13,7 @@ a = Analysis(
         ('mods', 'mods'),
         ('docs', 'docs'),
         ('config.json', '.'),
-        ('icon.png', '.'),
+        ('icon.ico', '.'),
     ],
     hiddenimports=['flask', 'requests', 'werkzeug', 'jinja2', 'click', 'itsdangerous', 'blinker', 'waitress'],
     hookspath=[],
